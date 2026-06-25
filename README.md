@@ -44,7 +44,16 @@ iplSquadVisual/
     ├── IPL_2025_Squad_Investment_Analytics_Dashboard.pbix  # Power BI report file
     ├── iplSquadVisual.pbiviz                               # Compiled visual package
     ├── dashboard_dax_measures.txt                         # Complete list of DAX measures
-    └── datasets/                                          # CSV files used as data sources
+    ├── ipl_dark_theme.json                                 # Custom Power BI dark theme template
+    ├── IPL_2025_All_Players_Data.xlsx                      # Raw multi-sheet Excel data source
+    ├── datasets/                                           # Cleaned CSV files used as data sources
+    │   ├── IPL_2025_All_Auction_Data.csv
+    │   └── IPL_2025_All_Verified_Stats.csv
+    └── scripts/                                            # Data pipelines and cleaning scripts
+        ├── compile_all_players.py                          # Compiles, scrapes and cleans wiki tables
+        ├── fuzzy_match_players.py                          # Multi-dataset fuzzy name mapping
+        ├── parse_auction_tables.py                         # Web crawler for auction data
+        └── ... (20 additional python helper scripts)
 ```
 
 ---
@@ -52,7 +61,7 @@ iplSquadVisual/
 ## Technical Highlights
 
 ### 1. Data Model & DAX Formulas
-All metrics are driven by a optimized relational model. Example DAX formulas used in the report:
+All metrics are driven by an optimized relational model. Example DAX formulas used in the report:
 * **ROI Score:** Combines performance statistics with auction cost.
   ```dax
   ROI Score = 
@@ -69,7 +78,13 @@ All metrics are driven by a optimized relational model. Example DAX formulas use
   RETURN IF(PlayerRank <= 10, [ROI Score], BLANK())
   ```
 
-### 2. React Layout Engine
+### 2. Python-Based Web Scraping & Data Prep Pipeline
+Before loading the data into Power BI, we built a Python-based pipeline to compile the dataset:
+* **Scraping Wikipedia:** Crawled and parsed HTML tables using Python (`requests` and `BeautifulSoup`) to extract the raw 2025 IPL auction buy/retained structures.
+* **Fuzzy String Matching:** Used `difflib` and custom mapping regex to automatically align player name spelling differences between performance records (e.g. scorecard spelling) and auction sheets (e.g. register spelling).
+* **Statistical Verification:** Re-computed aggregate averages, strike rates, and economies to ensure data integrity before exporting cleanly formatted CSV tables.
+
+### 3. React Layout Engine
 The custom visual handles state management internally to render three distinct dashboard pages:
 1. **Squad Overview:** Dynamic cards displaying Total Investment, Average Cost, Most Expensive Player, and player detail list.
 2. **ROI & Performance Charts:** Flex-based scatter plots charting Cost vs. Runs and Cost vs. Wickets with customized legends.
@@ -86,7 +101,7 @@ The custom visual handles state management internally to render three distinct d
 ### Installation & Development
 1. Clone this repository:
    ```bash
-   git clone <your-repository-url>
+   git clone https://github.com/KaranCode27/IPL2025-Squad-Investment-Analytics-Dashboard.git
    cd iplSquadVisual
    ```
 2. Install dependencies:
