@@ -1,0 +1,13 @@
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Visual build artifacts
+.tmp/
+dist/
+webpack.statistics.prod.html
+
+# Local editor configurations
+.vscode/
+.DS_Store
+Thumbs.db

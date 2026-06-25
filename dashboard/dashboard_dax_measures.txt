@@ -1,0 +1,371 @@
+==============================================================================
+               IPL 2025 PORTFOLIO DASHBOARD: DAX MEASURES & COLUMNS
+==============================================================================
+
+This file contains the complete, placement-quality DAX formula library for your 
+IPL 2025 Squad Investment Analytics Dashboard.
+
+How to add:
+- For MEASURES: Right-click on the "Auction_Data" table, select "New Measure", 
+  clear the pre-filled text, paste the formula, and press Enter.
+- For COLUMNS: Right-click on the "Auction_Data" table, select "New Column",
+  clear the pre-filled text, paste the formula, and press Enter.
+
+------------------------------------------------------------------------------
+SECTION 1: FINANCIAL & COUNT METRICS (Measures)
+------------------------------------------------------------------------------
+
+1. Total Investment (Cr)
+-------------------------
+Total Spend (Cr) = SUM(Auction_Data[Final_Player_Price_Cr])
+
+
+2. Average Player Cost (Cr)
+----------------------------
+Avg Player Cost (Cr) = AVERAGE(Auction_Data[Final_Player_Price_Cr])
+
+
+3. Auction Players Count
+-------------------------
+Auction Players = CALCULATE(COUNT(Auction_Data[Player]), Auction_Data[Acquisition] IN {"Auction", "RTM"})
+
+
+4. Retained Players Count
+--------------------------
+Retained Players = CALCULATE(COUNT(Auction_Data[Player]), Auction_Data[Acquisition] = "Retained")
+
+
+5. Most Expensive Player
+-------------------------
+Most Expensive Player = 
+CALCULATE(
+    SELECTEDVALUE(Auction_Data[Player]),
+    TOPN(1, ALL(Auction_Data), Auction_Data[Final_Player_Price_Cr], DESC)
+)
+
+
+------------------------------------------------------------------------------
+SECTION 2: RETURN ON INVESTMENT (ROI) & EFFICIENCY (Measures)
+------------------------------------------------------------------------------
+
+5. ROI Score
+-------------
+* Note: Combines Runs and Wickets (valuing 1 Wicket equal to 25 Runs) and divides by Price.
+* Includes safe-divide checks to avoid error on 0 price.
+
+ROI Score = 
+VAR Price = SUM(Auction_Data[Final_Player_Price_Cr])
+VAR TotalRuns = SUM(Performance_Data[Runs])
+VAR TotalWickets = SUM(Performance_Data[Wickets])
+RETURN
+    IF(
+        Price > 0,
+        DIVIDE(TotalRuns + (TotalWickets * 25), Price, 0),
+        0
+    )
+
+
+5.1. Top 10 ROI Score (Auto-Filtering Measure)
+-----------------------------------------------
+* Note: Automatically filters the visual to the Top 10 players, bypassing the Filters pane.
+* Respects active Team/Tier slicers dynamically.
+
+Top 10 ROI Score = 
+VAR PlayerRank = 
+    RANKX(
+        ALLSELECTED(Auction_Data[Player]),
+        [ROI Score],
+        ,
+        DESC,
+        Dense
+    )
+RETURN
+    IF(PlayerRank <= 10, [ROI Score], BLANK())
+
+
+6. Cost Per Run (Lakhs)
+------------------------
+* Note: Calculates price-per-run. If a player scored 0 runs, returns 0.
+
+Cost per Run (Lakhs) = 
+VAR PriceCr = SELECTEDVALUE(Auction_Data[Final_Player_Price_Cr])
+VAR TotalRuns = SUM(Performance_Data[Runs])
+RETURN
+    IF(
+        TotalRuns > 0,
+        DIVIDE(PriceCr * 100, TotalRuns, 0),
+        0
+    )
+
+
+7. Cost Per Wicket (Lakhs)
+---------------------------
+* Note: Calculates price-per-wicket. If a player took 0 wickets, returns 0.
+
+Cost per Wicket (Lakhs) = 
+VAR PriceCr = SELECTEDVALUE(Auction_Data[Final_Player_Price_Cr])
+VAR TotalWickets = SUM(Performance_Data[Wickets])
+RETURN
+    IF(
+        TotalWickets > 0,
+        DIVIDE(PriceCr * 100, TotalWickets, 0),
+        0
+    )
+
+
+8. Cost Per Match (Lakhs)
+--------------------------
+Cost per Match (Lakhs) = 
+VAR PriceCr = SELECTEDVALUE(Auction_Data[Final_Player_Price_Cr])
+VAR TotalMatches = SUM(Performance_Data[Matches])
+RETURN
+    IF(
+        TotalMatches > 0,
+        DIVIDE(PriceCr * 100, TotalMatches, 0),
+        0
+    )
+
+
+------------------------------------------------------------------------------
+SECTION 3: CLASSIFICATIONS & BADGES (Calculated Columns)
+------------------------------------------------------------------------------
+
+9. Player Tier
+---------------
+* Note: Categorizes players into Marquee vs Regular.
+
+Player Tier = IF(Auction_Data[Final_Player_Price_Cr] >= 11.0, "Marquee (Top 30)", "Regular")
+
+
+10. Valuation Category (Hidden Gems, Overpriced, Best Value)
+------------------------------------------------------------
+* Note: Recruiter-focused business logic classifying auction signings.
+
+Valuation Category = 
+VAR Price = Auction_Data[Final_Player_Price_Cr]
+VAR PlayerMatches = RELATED(Performance_Data[Matches])
+VAR PlayerRuns = RELATED(Performance_Data[Runs])
+VAR PlayerWickets = RELATED(Performance_Data[Wickets])
+RETURN
+    IF(
+        Price >= 10.0 && PlayerMatches > 0 && PlayerRuns < 150 && PlayerWickets < 5,
+        "Overpriced Buy",
+        IF(
+            Price <= 2.0 && PlayerMatches >= 2 && (PlayerRuns >= 200 || PlayerWickets >= 10),
+            "Hidden Gem",
+            IF(
+                Price <= 6.0 && PlayerMatches >= 3 && (PlayerRuns >= 350 || PlayerWickets >= 15),
+                "Best Value Signing",
+                "Regular Signing"
+            )
+        )
+    )
+
+
+11. Performance Badge
+----------------------
+* Note: Adds graphical Unicode status indicators in the tables based on performance.
+
+Performance Badge = 
+VAR RunsVal = SUM(Performance_Data[Runs])
+VAR WktsVal = SUM(Performance_Data[Wickets])
+RETURN
+    IF(RunsVal >= 450 && WktsVal >= 10, "👑 Elite All-Rounder",
+    IF(RunsVal >= 450, "🏏 Elite Batter",
+    IF(WktsVal >= 15, "🥎 Elite Bowler",
+    IF(RunsVal >= 250 || WktsVal >= 8, "⭐ Solid Contributor",
+    "Regular"))))
+
+
+------------------------------------------------------------------------------
+SECTION 4: ADVANCED DYNAMIC SVG GRAPHICS (Measure)
+------------------------------------------------------------------------------
+
+12. Player Radar Chart
+----------------------
+* Note: Generates a premium dynamic radar visual inside the grid.
+* CRITICAL: Select this measure in Power BI, go to "Measure tools" tab, and change "Data Category" to "Image URL".
+
+Player Radar Chart = 
+IF(
+    ISBLANK(SELECTEDVALUE(Auction_Data[Player])),
+    BLANK(),
+    -- 1. Gather player stats
+    VAR PlayerMatches = SUM(Performance_Data[Matches])
+    VAR PlayerRuns = SUM(Performance_Data[Runs])
+    VAR PlayerSR = SUM(Performance_Data[StrikeRate])
+    VAR PlayerWickets = SUM(Performance_Data[Wickets])
+    VAR PlayerEco = SUM(Performance_Data[Economy])
+
+    -- 2. Scale metrics between 0 and 1 (using season maximum benchmarks)
+    VAR MaxM = 17.0
+    VAR MaxR = 750.0
+    VAR MaxS = 220.0
+    VAR MaxW = 25.0
+
+    VAR ScaleM = IF(ISBLANK(PlayerMatches), 0.0, MIN(PlayerMatches / MaxM, 1.0))
+    VAR ScaleR = IF(ISBLANK(PlayerRuns), 0.0, MIN(PlayerRuns / MaxR, 1.0))
+    VAR ScaleS = IF(ISBLANK(PlayerSR), 0.0, MIN(PlayerSR / MaxS, 1.0))
+    VAR ScaleW = IF(ISBLANK(PlayerWickets), 0.0, MIN(PlayerWickets / MaxW, 1.0))
+    VAR ScaleE = IF(PlayerEco > 0, MIN(MAX((15.0 - PlayerEco) / 10.0, 0.0), 1.0), 0.0)
+
+    -- 3. Calculate XY coordinates for each metric vertex (Center 100, 100, Max Radius 80)
+    VAR X1 = 100
+    VAR Y1 = 100 - (80 * ScaleM)
+
+    VAR X2 = 100 + (80 * ScaleR * 0.951)
+    VAR Y2 = 100 - (80 * ScaleR * 0.309)
+
+    VAR X3 = 100 + (80 * ScaleS * 0.588)
+    VAR Y3 = 100 + (80 * ScaleS * 0.809)
+
+    VAR X4 = 100 - (80 * ScaleW * 0.588)
+    VAR Y4 = 100 + (80 * ScaleW * 0.809)
+
+    VAR X5 = 100 - (80 * ScaleE * 0.951)
+    VAR Y5 = 100 - (80 * ScaleE * 0.309)
+
+    -- 4. Construct SVG string (Note: we use %23 instead of # for stroke/fill colors, or rgb/rgba)
+    VAR SVG = 
+        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' width='100%' height='100%'>" &
+        
+        -- Background grid pentagons (radius 80, 60, 40, 20)
+        "<polygon points='100,20 176,75 147,165 53,165 24,75' stroke='rgba(255,255,255,0.1)' fill='none' stroke-width='1'/>" &
+        "<polygon points='100,40 157,81 135,149 65,149 43,81' stroke='rgba(255,255,255,0.1)' fill='none' stroke-width='1'/>" &
+        "<polygon points='100,60 138,88 124,132 76,132 62,88' stroke='rgba(255,255,255,0.1)' fill='none' stroke-width='1'/>" &
+        "<polygon points='100,80 119,94 112,116 88,116 81,94' stroke='rgba(255,255,255,0.1)' fill='none' stroke-width='1'/>" &
+        
+        -- Radial Axis Lines
+        "<line x1='100' y1='100' x2='100' y2='20' stroke='rgba(255,255,255,0.1)' stroke-width='1'/>" &
+        "<line x1='100' y1='100' x2='176' y2='75' stroke='rgba(255,255,255,0.1)' stroke-width='1'/>" &
+        "<line x1='100' y1='100' x2='147' y2='165' stroke='rgba(255,255,255,0.1)' stroke-width='1'/>" &
+        "<line x1='100' y1='100' x2='53' y2='165' stroke='rgba(255,255,255,0.1)' stroke-width='1'/>" &
+        "<line x1='100' y1='100' x2='24' y2='75' stroke='rgba(255,255,255,0.1)' stroke-width='1'/>" &
+        
+        -- Axis Labels (abbreviated at outer vertices)
+        "<text x='100' y='14' fill='rgba(255,255,255,0.6)' font-size='10' font-family='Segoe UI' text-anchor='middle'>MAT</text>" &
+        "<text x='184' y='78' fill='rgba(255,255,255,0.6)' font-size='10' font-family='Segoe UI' text-anchor='start'>RUN</text>" &
+        "<text x='152' y='178' fill='rgba(255,255,255,0.6)' font-size='10' font-family='Segoe UI' text-anchor='middle'>SR</text>" &
+        "<text x='48' y='178' fill='rgba(255,255,255,0.6)' font-size='10' font-family='Segoe UI' text-anchor='middle'>WKT</text>" &
+        "<text x='16' y='78' fill='rgba(255,255,255,0.6)' font-size='10' font-family='Segoe UI' text-anchor='end'>ECO</text>" &
+        
+        -- Player Area Fill (Teal theme color)
+        "<polygon points='" & X1 & "," & Y1 & " " & X2 & "," & Y2 & " " & X3 & "," & Y3 & " " & X4 & "," & Y4 & " " & X5 & "," & Y5 & "' " &
+        "fill='rgba(0, 242, 254, 0.25)' stroke='rgb(0, 242, 254)' stroke-width='2.5'/>" &
+        
+        -- Data Nodes (circles at each vertex)
+        "<circle cx='" & X1 & "' cy='" & Y1 & "' r='4' fill='rgb(0, 242, 254)' stroke='%23ffffff' stroke-width='1.5'/>" &
+        "<circle cx='" & X2 & "' cy='" & Y2 & "' r='4' fill='rgb(0, 242, 254)' stroke='%23ffffff' stroke-width='1.5'/>" &
+        "<circle cx='" & X3 & "' cy='" & Y3 & "' r='4' fill='rgb(0, 242, 254)' stroke='%23ffffff' stroke-width='1.5'/>" &
+        "<circle cx='" & X4 & "' cy='" & Y4 & "' r='4' fill='rgb(0, 242, 254)' stroke='%23ffffff' stroke-width='1.5'/>" &
+        "<circle cx='" & X5 & "' cy='" & Y5 & "' r='4' fill='rgb(0, 242, 254)' stroke='%23ffffff' stroke-width='1.5'/>" &
+        
+        "</svg>"
+
+    RETURN
+        "data:image/svg+xml;utf8," & SVG
+)
+
+==============================================================================
+
+------------------------------------------------------------------------------
+SECTION 5: AUTO-FILTERING MEASURES (Page 4 Value Leaderboard)
+------------------------------------------------------------------------------
+* Note: Use these measures in your Page 4 Table columns and Bar Chart to automatically
+  restrict rows to the Top 10 Value Performers, bypassing the missing Filters pane.
+
+5.1. Top 10 ROI Score (For Bar Chart & Table Value)
+---------------------------------------------------
+Top 10 ROI Score = 
+VAR PlayerRank = 
+    RANKX(
+        ALLSELECTED(Auction_Data[Player]),
+        [ROI Score],
+        ,
+        DESC,
+        Dense
+    )
+RETURN
+    IF(PlayerRank <= 10, [ROI Score], BLANK())
+
+
+5.2. Top 10 Player
+-------------------
+Top 10 Player = IF(ISBLANK([Top 10 ROI Score]), BLANK(), SELECTEDVALUE(Auction_Data[Player]))
+
+
+5.3. Top 10 Team
+-----------------
+Top 10 Team = IF(ISBLANK([Top 10 ROI Score]), BLANK(), SELECTEDVALUE(Auction_Data[Team]))
+
+
+5.4. Top 10 Price
+------------------
+Top 10 Price = IF(ISBLANK([Top 10 ROI Score]), BLANK(), [Total Spend (Cr)])
+
+
+5.5. Top 10 Runs
+-----------------
+Top 10 Runs = IF(ISBLANK([Top 10 ROI Score]), BLANK(), SUM(Performance_Data[Runs]))
+
+
+5.6. Top 10 Wickets
+--------------------
+Top 10 Wickets = IF(ISBLANK([Top 10 ROI Score]), BLANK(), SUM(Performance_Data[Wickets]))
+
+
+5.7. Top 10 Valuation
+----------------------
+Top 10 Valuation = IF(ISBLANK([Top 10 ROI Score]), BLANK(), SELECTEDVALUE(Auction_Data[Valuation Category]))
+
+==============================================================================
+
+------------------------------------------------------------------------------
+SECTION 6: KPI CARD METRICS (Page 3 & Page 4)
+------------------------------------------------------------------------------
+* Note: Create these measures in the "Auction_Data" or "Performance_Data" tables 
+  to bind directly to the top horizontal KPI card rows on Page 3 and Page 4.
+
+6.1. Total Runs (Page 3 Card)
+------------------------------
+Total Runs = SUM(Performance_Data[Runs])
+
+
+6.2. Total Wickets (Page 3 Card)
+---------------------------------
+Total Wickets = SUM(Performance_Data[Wickets])
+
+
+6.3. Avg Valuation Score (Page 3 Card)
+---------------------------------------
+Avg Valuation Score = AVERAGEX(ALLSELECTED(Auction_Data), [ROI Score])
+
+
+6.4. Best ROI Score (Page 4 Card)
+----------------------------------
+Best ROI Score = MAXX(ALLSELECTED(Auction_Data), [ROI Score])
+
+
+6.5. Hidden Gems Count (Page 4 Card)
+-------------------------------------
+Hidden Gems Count = 
+CALCULATE(
+    COUNT(Auction_Data[Player]), 
+    FILTER(ALLSELECTED(Auction_Data), Auction_Data[Valuation Category] = "Hidden Gem")
+)
+
+
+6.6. Avg ROI Score (Page 4 Card)
+---------------------------------
+Avg ROI Score = AVERAGEX(ALLSELECTED(Auction_Data), [ROI Score])
+
+
+6.7. Players with ROI over 300 (Page 4 Card)
+---------------------------------------------
+Players with ROI over 300 = 
+CALCULATE(
+    COUNT(Auction_Data[Player]), 
+    FILTER(ALLSELECTED(Auction_Data), [ROI Score] > 300)
+)
+
+==============================================================================
