@@ -28,7 +28,7 @@ When building high-end analytical applications, standard dashboard reporting too
 ## Project Structure
 
 ```
-iplSquadVisual/
+IPL2025-Squad-Investment-Analytics-Dashboard/
 ├── .gitignore               # Ensures node_modules/ and build outputs are excluded
 ├── capabilities.json        # Declares Power BI data roles, capabilities, and settings
 ├── package.json             # Visual project metadata and npm script configs
@@ -102,7 +102,7 @@ The custom visual handles state management internally to render three distinct d
 1. Clone this repository:
    ```bash
    git clone https://github.com/KaranCode27/IPL2025-Squad-Investment-Analytics-Dashboard.git
-   cd iplSquadVisual
+   cd IPL2025-Squad-Investment-Analytics-Dashboard
    ```
 2. Install dependencies:
    ```bash
