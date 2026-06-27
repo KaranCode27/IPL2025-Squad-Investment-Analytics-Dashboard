@@ -1,5 +1,7 @@
 # IPL 2025 Squad Investment Analytics: Custom Visual & Dashboard
 
+📅 **Project Presentation:** [📄 View Project Presentation (PDF)](./IPL%202025%20Squad%20Investment%20Analytics%20Dashboard%20Presentation.pdf)
+
 This repository contains the complete codebase and dashboard assets for the **IPL 2025 Squad Investment Analytics** project. It showcases a premium, dark-themed sports analytics dashboard built around a **custom React Power BI Visual** integrated into a robust **Power BI Desktop Dashboard**.
 
 ---
@@ -30,6 +32,7 @@ When building high-end analytical applications, standard dashboard reporting too
 ```
 IPL2025-Squad-Investment-Analytics-Dashboard/
 ├── .gitignore               # Ensures node_modules/ and build outputs are excluded
+├── IPL 2025 Squad Investment Analytics Dashboard Presentation.pdf  # Project presentation deck
 ├── capabilities.json        # Declares Power BI data roles, capabilities, and settings
 ├── package.json             # Visual project metadata and npm script configs
 ├── pbiviz.json              # Custom visual package configuration (metadata, entry points)
